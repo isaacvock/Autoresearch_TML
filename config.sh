@@ -14,6 +14,7 @@ WSL_CONDA_ENV="transcript-ml2"
 # Sherlock
 SHERLOCK_DATASET_DIR="/scratch/users/${USER}/path/to/imported/transcriptml_dataset"
 SHERLOCK_RUNS_ROOT="/scratch/users/${USER}/saluki-autoresearch-runs"
-SHERLOCK_CODEX_BIN="/path/to/codex"
+# The Sherlock supervisor loads the "codex" module, which provides this command.
+SHERLOCK_CODEX_BIN="codex"
 SHERLOCK_CONDA_ROOT="${GROUP_HOME:-${HOME}}/miniconda"
 SHERLOCK_CONDA_ENV="transcript-ml"

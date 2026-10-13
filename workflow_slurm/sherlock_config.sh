@@ -33,3 +33,16 @@ setup_transcriptml_env() {
   export AUTORESEARCH_ROOT DATASET_DIR RUNS_ROOT CODEX_BIN CONDA_ENV SHERLOCK_CONDA_ROOT
   export PYTHONPATH="${AUTORESEARCH_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 }
+
+setup_sherlock_codex() {
+  if ! command -v module >/dev/null 2>&1; then
+    echo "The Sherlock module command is unavailable; cannot load Codex." >&2
+    return 1
+  fi
+  module load codex
+  command -v "${CODEX_BIN}" >/dev/null 2>&1 || {
+    echo "Codex command not found after 'module load codex': ${CODEX_BIN}" >&2
+    return 1
+  }
+  export CODEX_BIN
+}

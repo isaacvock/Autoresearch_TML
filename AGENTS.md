@@ -8,6 +8,8 @@ inside it. TranscriptML is an installed dependency:
 
 - Local and Sherlock paths, Codex binaries, and Conda environments are selected
   from the user-maintained root `config.sh`.
+- On Sherlock, the supervisor loads Codex with `module load codex`; training and
+  aggregation jobs do not need the Codex module.
 - Never edit Conda `site-packages`. Architecture experiments must use models
   and parameters exposed by the installed TranscriptML version. A source-level
   TranscriptML change requires separate user authorization and an editable

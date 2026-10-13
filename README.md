@@ -8,9 +8,9 @@ production data must be imported separately and selected in `config.sh`.
 ## One-time configuration
 
 Edit the root `config.sh`. It is the single place for both WSL and Sherlock
-dataset paths, experiment-output paths, Codex executable paths, Conda roots,
-and Conda environment names. The launch scripts automatically select the WSL
-or Sherlock section. No shell variables need to be set before a run.
+dataset paths, experiment-output paths, Codex executable selection, Conda
+roots, and Conda environment names. The launch scripts automatically select
+the WSL or Sherlock section. No shell variables need to be set before a run.
 
 ```bash
 # Local WSL
@@ -23,7 +23,7 @@ WSL_CONDA_ENV="transcript-ml2"
 # Sherlock
 SHERLOCK_DATASET_DIR="/scratch/users/${USER}/path/to/transcriptml_dataset"
 SHERLOCK_RUNS_ROOT="/scratch/users/${USER}/saluki-autoresearch-runs"
-SHERLOCK_CODEX_BIN="/absolute/path/to/codex"
+SHERLOCK_CODEX_BIN="codex"
 SHERLOCK_CONDA_ROOT="${GROUP_HOME:-${HOME}}/miniconda"
 SHERLOCK_CONDA_ENV="transcript-ml"
 ```
@@ -31,9 +31,12 @@ SHERLOCK_CONDA_ENV="transcript-ml"
 Use Linux paths in both sections: WSL paths for the local section and Sherlock
 paths for the cluster section. `*_DATASET_DIR` must point to a prepared
 TranscriptML dataset bundle. `*_RUNS_ROOT` is where large experiment artifacts
-will be written. `*_CODEX_BIN` is needed by the autonomous supervisor but not
-by a direct manually selected experiment. The repository root is detected
-automatically and should not be added to `config.sh`.
+will be written. `WSL_CODEX_BIN` is the local Codex executable path.
+`SHERLOCK_CODEX_BIN` should remain `codex`: the Sherlock supervisor runs
+`module load codex` and then uses the command supplied by that module. Codex is
+needed by the autonomous supervisor but not by a direct manually selected
+experiment. The repository root is detected automatically and should not be
+added to `config.sh`.
 
 Commit `config.sh` after setting it so fresh agent turns and Sherlock clones use
 the same declared campaign configuration. Do not place tokens or passwords in
@@ -94,9 +97,11 @@ bash workflow_slurm/supervisor_once_sherlock.sh
 ```
 
 The supervisor wrapper selects the appropriate dataset, results directory,
-Codex executable, Conda root, and Conda environment from `config.sh`. A direct
-experiment does not invoke Codex; a supervisor tick invokes the configured
-Codex executable only when no experiment needs reconciliation or monitoring.
+Codex executable, Conda root, and Conda environment from `config.sh`. The
+Sherlock supervisor additionally runs `module load codex` and verifies that the
+module supplied the configured `codex` command. A direct experiment does not
+invoke or load Codex; a supervisor tick invokes it only when no experiment
+needs reconciliation or monitoring.
 
 Schedule the appropriate command every five minutes with cron or Windows Task
 Scheduler. For cron, use absolute paths, for example:
