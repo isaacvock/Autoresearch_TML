@@ -1,0 +1,10 @@
+# label	motif
+PRE	UGUA[A|U|C]AUA
+ARE_heptamer	UAUUUAU
+let7_7mer_m8	CUACCUC
+miR16_7mer_m8	UGCUGCU
+GRE	UGUUUGUUUGU
+mir19_7mer_m8	UUUGCAC
+mir17_7mer_m8	GCACUUU
+mir29_7mer_m8	UGGUGCU
+mir130_7mer_m8	UGCACUA
