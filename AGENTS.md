@@ -2,12 +2,12 @@
 
 ## Scope and environment
 
-`Autoresearch/` is a project directory in the enclosing repository. Never run
-`git init` here and never clone or vendor TranscriptML or Karpathy's
-autoresearch repository inside it. TranscriptML is an installed dependency:
+`Autoresearch/` is the Git repository root. Never initialize a nested Git
+repository or clone/vendor TranscriptML or Karpathy's autoresearch repository
+inside it. TranscriptML is an installed dependency:
 
-- Local execution is inside WSL with Conda environment `transcript-ml2`.
-- Sherlock execution is inside Conda environment `transcript-ml`.
+- Local and Sherlock paths, Codex binaries, and Conda environments are selected
+  from the user-maintained root `config.sh`.
 - Never edit Conda `site-packages`. Architecture experiments must use models
   and parameters exposed by the installed TranscriptML version. A source-level
   TranscriptML change requires separate user authorization and an editable
@@ -15,6 +15,8 @@ autoresearch repository inside it. TranscriptML is an installed dependency:
 
 Project layout:
 
+- `config.sh`: the single user-maintained configuration for WSL and Sherlock
+  dataset paths, results paths, Codex binaries, and Conda environments.
 - `SEARCH_SPACE.md`: the campaign's authoritative list of permitted models,
   configuration fields, values/ranges, and cross-field constraints. It is
   maintained by the user, not by autonomous research turns.
@@ -29,7 +31,7 @@ Project layout:
 - `runs/<experiment_id>/`: ignored immutable configs, attempts, manifests,
   metrics, and scheduler logs for one experiment.
 - `Saluki_let7/`: ignored, read-only example data retained only as context. Real
-  datasets are imported separately and supplied through `DATASET_DIR`.
+  datasets are imported separately and their paths are set in `config.sh`.
 
 ## Fixed campaign contract
 
@@ -74,9 +76,9 @@ the search-space file is empty because it introduces no new parameter choice.
 
 Do not change the dataset, splits, seeds, motifs, scoring definition,
 tolerances, resource requests, fold count, runner scripts, harness,
-`.gitignore`, `AGENTS.md`, or `program.md` to improve a score. Infrastructure
-repairs require explicit user authorization and must not be mixed with a model
-candidate.
+`.gitignore`, `config.sh`, `AGENTS.md`, or `program.md` to improve a score.
+Infrastructure repairs require explicit user authorization and must not be
+mixed with a model candidate.
 
 ## Required behavior
 
@@ -88,8 +90,8 @@ change might help one or both objectives.
 
 Validate JSON and the candidate config before committing. Explicitly check
 every changed field against `SEARCH_SPACE.md`, including conditional and
-cross-field constraints. Record the enclosing repository's parent and
-candidate commit hashes. Use a new immutable experiment ID. Write only the
+cross-field constraints. Record the repository's parent and candidate commit
+hashes. Use a new immutable experiment ID. Write only the
 proposal described in `program.md`; the supervisor owns submission. Never
 submit a second experiment while one is active.
 

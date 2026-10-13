@@ -3,41 +3,42 @@
 This directory runs one five-fold adaptive-CV campaign against an externally
 prepared TranscriptML dataset. It contains orchestration and candidate config,
 not TranscriptML source or datasets. `Saluki_let7/` is ignored example context;
-production data must be imported separately and selected with `DATASET_DIR`.
+production data must be imported separately and selected in `config.sh`.
+
+## One-time configuration
+
+Edit the root `config.sh`. It is the single place for both WSL and Sherlock
+dataset paths, experiment-output paths, Codex executable paths, Conda roots,
+and Conda environment names. The launch scripts automatically select the WSL
+or Sherlock section. No shell variables need to be set before a run.
 
 ## Direct local run in WSL
 
-The wrapper activates the `transcript-ml2` Conda environment. If Conda is not in
-`~/miniforge3`, `~/miniconda3`, or `~/anaconda3`, set `WSL_CONDA_ROOT`.
+The wrapper activates the WSL Conda environment configured in `config.sh`.
 
 ```bash
-cd /path/to/TranscriptML_Exploration/Autoresearch
-export DATASET_DIR=/path/to/imported/transcriptml_dataset
+cd /path/to/Autoresearch
 bash workflow/run_local_wsl.sh --experiment-id baseline-five-fold
 ```
 
-Set `RUNS_ROOT` to an external artifact directory if desired. Each experiment
-gets an immutable subdirectory. The direct runner processes folds serially;
-each fold performs training, held-out evaluation, and all nine full-dataset
-motif ablations before validated aggregation.
+Each experiment gets an immutable subdirectory under the configured WSL runs
+path. The direct runner processes folds serially; each fold performs training,
+held-out evaluation, and all nine full-dataset motif ablations before validated
+aggregation.
 
 ## Direct Sherlock run
 
-The submitter activates the `transcript-ml` Conda environment, snapshots the
-candidate config, creates the log directory, submits array indices `0-4`, and
-submits one dependent aggregation job.
+The submitter activates the Sherlock Conda environment configured in
+`config.sh`, snapshots the candidate config, creates the log directory, submits
+array indices `0-4`, and submits one dependent aggregation job.
 
 ```bash
-cd /path/to/TranscriptML_Exploration/Autoresearch
-export DATASET_DIR=/scratch/users/$USER/path/to/imported/transcriptml_dataset
-export RUNS_ROOT=/scratch/users/$USER/saluki-autoresearch-runs  # optional
+cd /path/to/Autoresearch
 bash workflow_slurm/submit_train_eval_cv.sh --experiment-id baseline-five-fold
 ```
 
-Override `SHERLOCK_CONDA_ROOT` if the Conda installation is not under
-`${GROUP_HOME:-$HOME}/miniconda`. Keep the same TranscriptML release/revision in
-both environments; every experiment records the installed package version and
-executable path.
+Keep the same TranscriptML release/revision in both environments; every
+experiment records the installed package version and executable path.
 
 ## Restartable agent supervisor
 
@@ -51,28 +52,24 @@ ledger and derived Pareto set are `runtime/experiments.jsonl` and
 Run a local tick with:
 
 ```bash
-export DATASET_DIR=/path/to/imported/transcriptml_dataset
-export CODEX_BIN=/path/to/codex  # only if codex is not on the scheduler PATH
 bash workflow/supervisor_once_wsl.sh
 ```
 
 Run a Sherlock tick with:
 
 ```bash
-export DATASET_DIR=/scratch/users/$USER/path/to/imported/transcriptml_dataset
 bash workflow_slurm/supervisor_once_sherlock.sh
 ```
 
 Schedule the appropriate command every five minutes with cron or Windows Task
-Scheduler. For cron, use absolute paths and put environment variables in a
-private wrapper outside the repository, for example:
+Scheduler. For cron, use absolute paths, for example:
 
 ```cron
 */5 * * * * /absolute/path/Autoresearch/workflow/supervisor_once_wsl.sh >>/absolute/path/supervisor.log 2>&1
 ```
 
 For Windows Task Scheduler, make the action `wsl.exe` and pass arguments like
-`-- bash -lc 'export DATASET_DIR=/data/path; bash /absolute/wsl/path/Autoresearch/workflow/supervisor_once_wsl.sh'`.
+`-- bash -lc 'bash /absolute/wsl/path/Autoresearch/workflow/supervisor_once_wsl.sh'`.
 The supervisor honors an advertised ISO reset time in quota messages; otherwise
 it backs off for 15 minutes, 30 minutes, one hour, then two hours. A later tick
 starts a fresh agent turn from Git and the durable files. Never schedule both
@@ -88,19 +85,19 @@ test-set estimates. No sealed holdout is used during this campaign.
 The system deliberately separates three kinds of state:
 
 1. **Version-controlled research intent.** `AGENTS.md`, `program.md`,
-   `SEARCH_SPACE.md`, the fixed workflow and scoring code, and
-   `workflow/example_train_config.json` live in the enclosing Git repository.
+   `SEARCH_SPACE.md`, `config.sh`, the fixed workflow and scoring code, and
+   `workflow/example_train_config.json` live in this Git repository.
    During an autonomous research turn, the candidate config is the only
    scientific workflow file the agent may edit.
-2. **External immutable inputs.** TranscriptML is installed in the active Conda
-   environment, and the prepared dataset is supplied through `DATASET_DIR`.
+2. **External immutable inputs.** TranscriptML is installed in the configured
+   Conda environment, and the prepared dataset is selected in `config.sh`.
    Neither TranscriptML source nor production data is vendored here.
 3. **Durable generated state.** Experiment artifacts live under `RUNS_ROOT`,
    while campaign control state lives under the ignored `runtime/` directory.
    These files, rather than the lifetime of a Codex process, determine what has
    run and what remains to be done.
 
-The enclosing Git repository must be valid before autonomous proposals can be
+This Git repository must be valid before autonomous proposals can be
 accepted. Git revisions identify the candidate and its Pareto parent. The
 supervisor never initializes a nested repository and never modifies an
 installed TranscriptML package.
@@ -112,6 +109,7 @@ Autoresearch/
 ├── AGENTS.md                         stable permissions and campaign rules
 ├── program.md                        one bounded agent-turn protocol
 ├── SEARCH_SPACE.md                   user-defined permitted candidate choices
+├── config.sh                         WSL and Sherlock user configuration
 ├── README.md
 ├── workflow/
 │   ├── campaign.env                  fixed folds, seeds, metric tolerances
@@ -139,7 +137,7 @@ Autoresearch/
 
 `Saluki_let7/` is ignored contextual material. It is not a workflow default.
 If those files were tracked before the ignore rule was added, they must be
-removed once from the enclosing Git index with `git rm -r --cached` while
+removed once from this repository's Git index with `git rm -r --cached` while
 leaving the local files intact.
 
 ### Fixed scientific contract
@@ -312,7 +310,7 @@ active, it exits without editing or waiting.
 When idle, the agent selects a Pareto parent, states one hypothesis, edits only
 the candidate config using choices explicitly permitted by `SEARCH_SPACE.md`,
 validates it, and—except for the unchanged baseline—makes one candidate commit
-in the enclosing repository. An empty or incomplete search space blocks
+in this repository. An empty or incomplete search space blocks
 post-baseline proposals rather than inviting guesses. The agent writes one
 atomic `runtime/proposal.json` containing the experiment ID, hypothesis, parent
 commit, candidate commit, and config path. It does not submit compute itself.

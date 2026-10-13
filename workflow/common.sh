@@ -7,10 +7,10 @@ AUTORESEARCH_ROOT="${AUTORESEARCH_ROOT:-$(cd "${WORKFLOW_DIR}/.." && pwd)}"
 
 source "${WORKFLOW_DIR}/campaign.env"
 
-# Datasets are external campaign inputs and are never stored in this repository.
-DATASET_DIR="${DATASET_DIR:-}"
+# User paths are loaded by the WSL or Sherlock wrapper from config.sh.
+: "${DATASET_DIR:?Launch through a WSL or Sherlock wrapper so config.sh is loaded}"
 BASE_TRAIN_CONFIG="${BASE_TRAIN_CONFIG:-${WORKFLOW_DIR}/example_train_config.json}"
-RUNS_ROOT="${RUNS_ROOT:-${AUTORESEARCH_ROOT}/runs}"
+: "${RUNS_ROOT:?Launch through a WSL or Sherlock wrapper so config.sh is loaded}"
 MOTIF_SPECS_FILE="${MOTIF_SPECS_FILE:-${WORKFLOW_DIR}/motifs.tsv}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 TRANSCRIPTML_BIN="${TRANSCRIPTML_BIN:-transcriptml}"
@@ -42,11 +42,10 @@ validate_campaign() {
     echo "Pareto tolerances differ from the immutable campaign" >&2
     return 2
   }
-  [[ -n "${DATASET_DIR}" ]] || {
-    echo "DATASET_DIR must point to an externally imported TranscriptML dataset." >&2
+  [[ -d "${DATASET_DIR}" ]] || {
+    echo "Dataset directory not found: ${DATASET_DIR}. Edit the matching path in config.sh." >&2
     return 2
   }
-  [[ -d "${DATASET_DIR}" ]] || { echo "Dataset directory not found: ${DATASET_DIR}" >&2; return 2; }
   [[ -f "${BASE_TRAIN_CONFIG}" ]] || { echo "Base train config not found: ${BASE_TRAIN_CONFIG}" >&2; return 2; }
   [[ -f "${MOTIF_SPECS_FILE}" ]] || { echo "Motif specification not found: ${MOTIF_SPECS_FILE}" >&2; return 2; }
   [[ "${EVAL_SPLIT}" == "test" ]] || { echo "EVAL_SPLIT is immutable and must be test" >&2; return 2; }

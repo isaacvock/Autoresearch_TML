@@ -1,13 +1,17 @@
 #!/bin/bash
 
-# Sherlock-specific environment activation. Campaign parameters live only in
-# workflow/campaign.env so local and Slurm execution cannot silently diverge.
+# Sherlock-specific environment activation. Campaign parameters live in
+# workflow/campaign.env and user paths/environment settings live in config.sh.
 
 SLURM_WORKFLOW_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AUTORESEARCH_ROOT="${AUTORESEARCH_ROOT:-$(cd "${SLURM_WORKFLOW_DIR}/.." && pwd)}"
+AUTORESEARCH_ROOT="$(cd "${SLURM_WORKFLOW_DIR}/.." && pwd)"
+# shellcheck source=../config.sh
+source "${AUTORESEARCH_ROOT}/config.sh"
 
-CONDA_ENV="${CONDA_ENV:-transcript-ml}"
-SHERLOCK_CONDA_ROOT="${SHERLOCK_CONDA_ROOT:-${GROUP_HOME:-${HOME}}/miniconda}"
+DATASET_DIR="${SHERLOCK_DATASET_DIR}"
+RUNS_ROOT="${SHERLOCK_RUNS_ROOT}"
+CODEX_BIN="${SHERLOCK_CODEX_BIN}"
+CONDA_ENV="${SHERLOCK_CONDA_ENV}"
 
 setup_transcriptml_env() {
   if command -v module >/dev/null 2>&1; then
@@ -16,7 +20,7 @@ setup_transcriptml_env() {
   fi
   if [[ ! -f "${SHERLOCK_CONDA_ROOT}/etc/profile.d/conda.sh" ]]; then
     echo "Conda initialization not found at ${SHERLOCK_CONDA_ROOT}/etc/profile.d/conda.sh" >&2
-    echo "Set SHERLOCK_CONDA_ROOT to the Sherlock Conda installation root." >&2
+    echo "Edit SHERLOCK_CONDA_ROOT in config.sh." >&2
     return 1
   fi
   # shellcheck source=/dev/null
@@ -26,6 +30,6 @@ setup_transcriptml_env() {
     echo "transcriptml is not installed in Conda environment ${CONDA_ENV}" >&2
     return 1
   }
-  export AUTORESEARCH_ROOT
+  export AUTORESEARCH_ROOT DATASET_DIR RUNS_ROOT CODEX_BIN CONDA_ENV SHERLOCK_CONDA_ROOT
   export PYTHONPATH="${AUTORESEARCH_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 }

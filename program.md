@@ -14,7 +14,7 @@ Read, in order:
 4. Every record in `runtime/experiments.jsonl` and `runtime/frontier.json` if
    present.
 5. The proposal and metrics for relevant prior experiments.
-6. The enclosing repository's status, diff, recent commits, and current
+6. The repository's status, diff, recent commits, and current
    `workflow/example_train_config.json`.
 7. Slurm state only when durable state contains Sherlock job IDs.
 
@@ -66,11 +66,10 @@ are satisfied. The command above checks basic config structure; it does not
 replace this search-space review.
 
 Review the diff and, except for the unchanged baseline, make one candidate
-commit in the enclosing repository. The commit message should name the single
-hypothesis. Do not initialize a nested repository. If there is no valid
-enclosing Git repository, or unrelated user
-changes overlap the candidate file, stop and report the blocker rather than
-creating a proposal.
+commit in the repository. The commit message should name the single hypothesis.
+Do not initialize a nested repository. If there is no valid Git repository, or
+unrelated user changes overlap the candidate file, stop and report the blocker
+rather than creating a proposal.
 
 Choose a new experiment ID such as
 `YYYYMMDDTHHMMSSZ-short-hypothesis`. Atomically write
