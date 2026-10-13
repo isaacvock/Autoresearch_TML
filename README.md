@@ -12,9 +12,38 @@ dataset paths, experiment-output paths, Codex executable paths, Conda roots,
 and Conda environment names. The launch scripts automatically select the WSL
 or Sherlock section. No shell variables need to be set before a run.
 
+```bash
+# Local WSL
+WSL_DATASET_DIR="/mnt/c/path/to/transcriptml_dataset"
+WSL_RUNS_ROOT="${AUTORESEARCH_ROOT}/runs"
+WSL_CODEX_BIN="/absolute/path/to/codex"
+WSL_CONDA_ROOT="/home/isaac/miniforge3"
+WSL_CONDA_ENV="transcript-ml2"
+
+# Sherlock
+SHERLOCK_DATASET_DIR="/scratch/users/${USER}/path/to/transcriptml_dataset"
+SHERLOCK_RUNS_ROOT="/scratch/users/${USER}/saluki-autoresearch-runs"
+SHERLOCK_CODEX_BIN="/absolute/path/to/codex"
+SHERLOCK_CONDA_ROOT="${GROUP_HOME:-${HOME}}/miniconda"
+SHERLOCK_CONDA_ENV="transcript-ml"
+```
+
+Use Linux paths in both sections: WSL paths for the local section and Sherlock
+paths for the cluster section. `*_DATASET_DIR` must point to a prepared
+TranscriptML dataset bundle. `*_RUNS_ROOT` is where large experiment artifacts
+will be written. `*_CODEX_BIN` is needed by the autonomous supervisor but not
+by a direct manually selected experiment. The repository root is detected
+automatically and should not be added to `config.sh`.
+
+Commit `config.sh` after setting it so fresh agent turns and Sherlock clones use
+the same declared campaign configuration. Do not place tokens or passwords in
+it; the configured values should only be paths and environment names.
+
 ## Direct local run in WSL
 
-The wrapper activates the WSL Conda environment configured in `config.sh`.
+Run this from a WSL shell. The wrapper reads the WSL section of `config.sh`,
+activates the configured Conda environment, checks the dataset and TranscriptML
+installation, and then runs folds `0-4` serially.
 
 ```bash
 cd /path/to/Autoresearch
@@ -28,17 +57,20 @@ aggregation.
 
 ## Direct Sherlock run
 
-The submitter activates the Sherlock Conda environment configured in
-`config.sh`, snapshots the candidate config, creates the log directory, submits
-array indices `0-4`, and submits one dependent aggregation job.
+Run this from a Sherlock login node. The submitter reads the Sherlock section
+of `config.sh`, activates the configured Conda environment, snapshots the
+candidate config, creates the log directory, submits array indices `0-4`, and
+submits one dependent aggregation job.
 
 ```bash
 cd /path/to/Autoresearch
 bash workflow_slurm/submit_train_eval_cv.sh --experiment-id baseline-five-fold
 ```
 
-Keep the same TranscriptML release/revision in both environments; every
-experiment records the installed package version and executable path.
+The submitted jobs receive these settings automatically; do not export them in
+your shell or add them to the submission command. Keep the same TranscriptML
+release/revision in both environments; every experiment records the installed
+package version and executable path.
 
 ## Restartable agent supervisor
 
@@ -60,6 +92,11 @@ Run a Sherlock tick with:
 ```bash
 bash workflow_slurm/supervisor_once_sherlock.sh
 ```
+
+The supervisor wrapper selects the appropriate dataset, results directory,
+Codex executable, Conda root, and Conda environment from `config.sh`. A direct
+experiment does not invoke Codex; a supervisor tick invokes the configured
+Codex executable only when no experiment needs reconciliation or monitoring.
 
 Schedule the appropriate command every five minutes with cron or Windows Task
 Scheduler. For cron, use absolute paths, for example:
@@ -92,10 +129,11 @@ The system deliberately separates three kinds of state:
 2. **External immutable inputs.** TranscriptML is installed in the configured
    Conda environment, and the prepared dataset is selected in `config.sh`.
    Neither TranscriptML source nor production data is vendored here.
-3. **Durable generated state.** Experiment artifacts live under `RUNS_ROOT`,
-   while campaign control state lives under the ignored `runtime/` directory.
-   These files, rather than the lifetime of a Codex process, determine what has
-   run and what remains to be done.
+3. **Durable generated state.** Experiment artifacts live under the applicable
+   `*_RUNS_ROOT` path from `config.sh` (used internally as `RUNS_ROOT`), while
+   campaign control state lives under the ignored `runtime/` directory. These
+   files, rather than the lifetime of a Codex process, determine what has run
+   and what remains to be done.
 
 This Git repository must be valid before autonomous proposals can be
 accepted. Git revisions identify the candidate and its Pareto parent. The
@@ -190,7 +228,8 @@ snapshot, validates the fixed training seed and model name, and records:
 - TranscriptML package version and executable path; and
 - the optimization-CV performance label.
 
-The generated layout is approximately:
+The generated layout under the selected configured runs directory is
+approximately:
 
 ```text
 RUNS_ROOT/<experiment-id>/
@@ -219,7 +258,9 @@ evidence for later diagnosis.
 ### Fold lifecycle and validation
 
 Before doing work, `run_fold.sh` validates any existing promoted fold. A valid
-fold is skipped. Otherwise, it creates a new attempt and performs:
+fold is skipped. If no promoted fold exists, it checks previous attempt
+directories and promotes a fully finished valid attempt when possible. Only
+when there is nothing recoverable does it create a new attempt and perform:
 
 1. TranscriptML fold preparation using the immutable config snapshot.
 2. Model training.
@@ -275,6 +316,12 @@ generated for convenience, but it should not replace the JSONL ledger.
 Local execution and Sherlock execution call the same `workflow/run_fold.sh`.
 This guarantees the same folds, seeds, motifs, configuration rules, artifact
 layout, and scorer in both environments.
+
+`workflow/run_local_wsl.sh` selects the five `WSL_*` values in `config.sh`.
+The scripts under `workflow_slurm/` select the five `SHERLOCK_*` values. They
+translate those settings into internal process and Slurm-job values
+automatically. User-provided shell exports are neither required nor used as the
+configuration interface.
 
 The direct WSL runner processes folds serially. When launched by the supervisor,
 it runs as an independent process and writes `local.log`. A manually started
@@ -389,8 +436,8 @@ persistent.
 - Use the same TranscriptML release and code revision in WSL and Sherlock.
   Package version and executable path are recorded, but operators should also
   ensure identically built environments when comparing results.
-- Keep `RUNS_ROOT` on persistent storage. Generated runs, `runtime/`, and the
-  contextual dataset are ignored by Git.
+- Point both configured `*_RUNS_ROOT` values at persistent storage. Generated
+  runs, `runtime/`, and the contextual dataset are ignored by Git.
 - Do not run local and Sherlock supervisors against the same campaign
   simultaneously.
 - Do not delete attempts or edit completed experiment artifacts. Start a new
