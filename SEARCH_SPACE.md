@@ -1,6 +1,6 @@
 # Six-Channel RNA Training Configuration
 
-Use this reference when creating `scripts/example_train_config.json` for RNA inputs with six channels. Set `model.name` to exactly one of:
+Use this reference when editing the root `example_train_config.json` for RNA inputs with six channels. Set `model.name` to exactly one of:
 
 - `small_cnn`
 - `saluki_exact`

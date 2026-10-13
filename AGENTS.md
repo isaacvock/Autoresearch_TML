@@ -22,8 +22,9 @@ Project layout:
 - `SEARCH_SPACE.md`: the campaign's authoritative list of permitted models,
   configuration fields, values/ranges, and cross-field constraints. It is
   maintained by the user, not by autonomous research turns.
+- `example_train_config.json`: the agent-editable candidate configuration.
 - `workflow/`: shared five-fold runner, immutable campaign settings, motif set,
-  and the editable candidate config `example_train_config.json`.
+  and local execution wrappers.
 - `workflow_slurm/`: Sherlock activation and Slurm wrappers around the shared
   runner.
 - `autoresearch_harness/`: validation, scoring, ledger, Pareto, and supervisor
@@ -63,7 +64,7 @@ unbiased test result or imply that it estimates performance after selection.
 
 ## Allowed experiment edits
 
-During an autoresearch turn, edit only `workflow/example_train_config.json`.
+During an autoresearch turn, edit only `example_train_config.json`.
 You may change only the model architecture and optimizer/training fields that
 `SEARCH_SPACE.md` explicitly permits, and only to values satisfying its ranges
 and constraints. A TranscriptML option is not permitted merely because it

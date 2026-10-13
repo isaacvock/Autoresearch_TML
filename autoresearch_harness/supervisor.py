@@ -241,9 +241,9 @@ def _validate_proposal(root: Path, runs_root: Path, proposal: dict[str, Any]) ->
     if not config.is_absolute():
         config = root / config
     config = config.resolve()
-    allowed_config = (root / "workflow" / "example_train_config.json").resolve()
+    allowed_config = (root / "example_train_config.json").resolve()
     if config != allowed_config:
-        raise ValueError("proposal base_train_config must be workflow/example_train_config.json")
+        raise ValueError("proposal base_train_config must be example_train_config.json")
     if (runs_root / experiment_id).exists():
         raise ValueError(f"experiment ID already exists: {experiment_id}")
 
@@ -285,7 +285,7 @@ def _validate_proposal(root: Path, runs_root: Path, proposal: dict[str, Any]) ->
         if row.get("status") == "scored"
     ]
     if scored and changed != [relative_config]:
-        raise ValueError("candidate commit must change only workflow/example_train_config.json")
+        raise ValueError("candidate commit must change only example_train_config.json")
     if scored:
         frontier_path = root / "runtime" / "frontier.json"
         frontier = read_json(frontier_path) if frontier_path.is_file() else {}

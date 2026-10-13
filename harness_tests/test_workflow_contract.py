@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -36,8 +37,13 @@ class WorkflowContractTest(unittest.TestCase):
 
     def test_data_is_external_and_ignored(self) -> None:
         common = (ROOT / "workflow" / "common.sh").read_text(encoding="utf-8")
+        config = (ROOT / "config.sh").read_text(encoding="utf-8")
         ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
-        self.assertIn('DATASET_DIR="${DATASET_DIR:-}"', common)
+        self.assertIn('WSL_DATASET_DIR=', config)
+        self.assertIn('SHERLOCK_DATASET_DIR=', config)
+        self.assertIn('${AUTORESEARCH_ROOT}/example_train_config.json', common)
+        self.assertTrue((ROOT / "example_train_config.json").is_file())
+        self.assertFalse((ROOT / "workflow" / "example_train_config.json").exists())
         self.assertIn("/Saluki_let7/", ignore)
 
     def test_search_space_is_part_of_the_agent_contract(self) -> None:
@@ -68,6 +74,14 @@ class WorkflowContractTest(unittest.TestCase):
             self.skipTest("test requires an active Conda environment")
         with tempfile.TemporaryDirectory() as temporary:
             temp = Path(temporary)
+            test_root = temp / "repo"
+            shutil.copytree(
+                ROOT,
+                test_root,
+                ignore=shutil.ignore_patterns(
+                    ".git", "Saluki_let7", "runs", "runtime", "test_experiments", "__pycache__"
+                ),
+            )
             dataset = temp / "dataset"
             dataset.mkdir()
             for name in ("X.npy", "y.npy", "ids.txt", "config.json", "schema.json", "metadata.json"):
@@ -87,20 +101,25 @@ class WorkflowContractTest(unittest.TestCase):
                 encoding="utf-8",
             )
             sbatch.chmod(0o755)
+            (test_root / "config.sh").write_text(
+                "#!/bin/bash\n"
+                f'SHERLOCK_DATASET_DIR="{dataset}"\n'
+                f'SHERLOCK_RUNS_ROOT="{temp / "runs"}"\n'
+                'SHERLOCK_CODEX_BIN="codex"\n'
+                f'SHERLOCK_CONDA_ROOT="{Path(conda_prefix).parents[1]}"\n'
+                f'SHERLOCK_CONDA_ENV="{Path(conda_prefix).name}"\n',
+                encoding="utf-8",
+            )
             env = os.environ.copy()
             env.update(
                 {
                     "PATH": f"{fake_bin}:{env['PATH']}",
-                    "DATASET_DIR": str(dataset),
-                    "RUNS_ROOT": str(temp / "runs"),
-                    "CONDA_ENV": Path(conda_prefix).name,
-                    "SHERLOCK_CONDA_ROOT": str(Path(conda_prefix).parents[1]),
                     "SBATCH_STUB_LOG": str(temp / "sbatch.log"),
                     "SBATCH_STUB_STATE": str(temp / "sbatch.state"),
                 }
             )
             result = subprocess.run(
-                ["bash", str(ROOT / "workflow_slurm" / "submit_train_eval_cv.sh"), "--experiment-id", "stub-submit"],
+                ["bash", str(test_root / "workflow_slurm" / "submit_train_eval_cv.sh"), "--experiment-id", "stub-submit"],
                 text=True,
                 capture_output=True,
                 check=True,

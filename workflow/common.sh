@@ -9,7 +9,7 @@ source "${WORKFLOW_DIR}/campaign.env"
 
 # User paths are loaded by the WSL or Sherlock wrapper from config.sh.
 : "${DATASET_DIR:?Launch through a WSL or Sherlock wrapper so config.sh is loaded}"
-BASE_TRAIN_CONFIG="${BASE_TRAIN_CONFIG:-${WORKFLOW_DIR}/example_train_config.json}"
+BASE_TRAIN_CONFIG="${BASE_TRAIN_CONFIG:-${AUTORESEARCH_ROOT}/example_train_config.json}"
 : "${RUNS_ROOT:?Launch through a WSL or Sherlock wrapper so config.sh is loaded}"
 MOTIF_SPECS_FILE="${MOTIF_SPECS_FILE:-${WORKFLOW_DIR}/motifs.tsv}"
 PYTHON_BIN="${PYTHON_BIN:-python}"

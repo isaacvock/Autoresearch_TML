@@ -15,7 +15,7 @@ Read, in order:
    present.
 5. The proposal and metrics for relevant prior experiments.
 6. The repository's status, diff, recent commits, and current
-   `workflow/example_train_config.json`.
+   `example_train_config.json`.
 7. Slurm state only when durable state contains Sherlock job IDs.
 
 Git and artifacts are evidence; do not overwrite one to make it agree with
@@ -48,7 +48,7 @@ stop and report the blocker; do not infer a search space from package internals.
 
 ## 3. Prepare exactly one candidate
 
-Edit only `workflow/example_train_config.json`. Keep `seed` equal to `42` and
+Edit only `example_train_config.json`. Keep `seed` equal to `42` and
 do not edit infrastructure, data, folds, motifs, metrics, or resource settings.
 Use a model and parameters both permitted by `SEARCH_SPACE.md` and supported by
 the TranscriptML executable installed in the active Conda environment.
@@ -56,8 +56,8 @@ the TranscriptML executable installed in the active Conda environment.
 Run lightweight deterministic checks before committing:
 
 ```bash
-python -m json.tool workflow/example_train_config.json >/dev/null
-python -m autoresearch_harness config-model workflow/example_train_config.json
+python -m json.tool example_train_config.json >/dev/null
+python -m autoresearch_harness config-model example_train_config.json
 ```
 
 Before committing, compare the diff field by field with `SEARCH_SPACE.md` and
@@ -83,7 +83,7 @@ Choose a new experiment ID such as
   "hypothesis": "One precise sentence describing the change and expected effect.",
   "parent_commit": "full Git commit hash",
   "candidate_commit": "full Git commit hash",
-  "base_train_config": "workflow/example_train_config.json"
+  "base_train_config": "example_train_config.json"
 }
 ```
 

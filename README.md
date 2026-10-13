@@ -128,7 +128,7 @@ The system deliberately separates three kinds of state:
 
 1. **Version-controlled research intent.** `AGENTS.md`, `program.md`,
    `SEARCH_SPACE.md`, `config.sh`, the fixed workflow and scoring code, and
-   `workflow/example_train_config.json` live in this Git repository.
+   `example_train_config.json` live in this Git repository.
    During an autonomous research turn, the candidate config is the only
    scientific workflow file the agent may edit.
 2. **External immutable inputs.** TranscriptML is installed in the configured
@@ -153,11 +153,11 @@ Autoresearch/
 ├── program.md                        one bounded agent-turn protocol
 ├── SEARCH_SPACE.md                   user-defined permitted candidate choices
 ├── config.sh                         WSL and Sherlock user configuration
+├── example_train_config.json         agent-editable candidate
 ├── README.md
 ├── workflow/
 │   ├── campaign.env                  fixed folds, seeds, metric tolerances
 │   ├── motifs.tsv                    fixed nine-motif definition
-│   ├── example_train_config.json     agent-editable candidate
 │   ├── common.sh                     shared paths and campaign validation
 │   ├── run_fold.sh                   common local/Slurm fold implementation
 │   ├── run_experiment.sh             serial five-fold local runner
