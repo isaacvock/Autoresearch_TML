@@ -9,9 +9,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${AUTORESEARCH_ROOT:?AUTORESEARCH_ROOT was not exported by the submitter}"
 # shellcheck source=sherlock_config.sh
-source "${SCRIPT_DIR}/sherlock_config.sh"
+source "${AUTORESEARCH_ROOT}/workflow_slurm/sherlock_config.sh"
 setup_transcriptml_env
 
 : "${AUTORESEARCH_EXPERIMENT_ID:?AUTORESEARCH_EXPERIMENT_ID was not exported by the submitter}"

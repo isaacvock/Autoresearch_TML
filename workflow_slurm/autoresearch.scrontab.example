@@ -1,0 +1,15 @@
+# Replace /absolute/path/to/Autoresearch with this repository's absolute
+# Sherlock path, then add this block with `scrontab -e`. The
+# start_autoresearch.sh helper performs that installation automatically.
+
+# BEGIN SALUKI_AUTORESEARCH
+#SCRON -p service
+#SCRON --name=saluki-autoresearch
+#SCRON -t 01:00:00
+#SCRON -c 1
+#SCRON --mem=2G
+#SCRON --dependency=singleton
+#SCRON -o /absolute/path/to/Autoresearch/runtime/supervisor.log
+#SCRON --open-mode=append
+*/5 * * * * bash /absolute/path/to/Autoresearch/workflow_slurm/supervisor_once_sherlock.sh
+# END SALUKI_AUTORESEARCH

@@ -408,6 +408,10 @@ def run_once(root: str | Path, *, dry_run: bool = False) -> dict[str, Any]:
             save_state(root_path, state)
             return state
         state.update(status="idle", quota_failures=0, next_attempt_at=None, last_error=None)
+        if (runtime / "STOP").exists():
+            state.update(status="stopped", last_error=None)
+            save_state(root_path, state)
+            return state
         try:
             _launch_proposal(root_path, runs_root, state)
         except subprocess.CalledProcessError as exc:

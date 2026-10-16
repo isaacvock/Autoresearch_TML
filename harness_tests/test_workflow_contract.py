@@ -36,12 +36,60 @@ class WorkflowContractTest(unittest.TestCase):
     def test_local_and_slurm_share_the_fold_runner(self) -> None:
         local = (ROOT / "workflow" / "run_experiment.sh").read_text(encoding="utf-8")
         slurm = (ROOT / "workflow_slurm" / "train_eval_cv_fold.sh").read_text(encoding="utf-8")
+        aggregate = (ROOT / "workflow_slurm" / "aggregate_experiment.sh").read_text(
+            encoding="utf-8"
+        )
         submit = (ROOT / "workflow_slurm" / "submit_train_eval_cv.sh").read_text(encoding="utf-8")
         self.assertIn("run_fold.sh", local)
         self.assertIn("run_fold.sh", slurm)
+        for submitted_script in (slurm, aggregate):
+            self.assertIn(
+                'source "${AUTORESEARCH_ROOT}/workflow_slurm/sherlock_config.sh"',
+                submitted_script,
+            )
+            self.assertNotIn('source "${SCRIPT_DIR}/sherlock_config.sh"', submitted_script)
         self.assertIn('--array="0-$((N_FOLDS - 1))"', submit)
         self.assertIn("--parsable", submit)
         self.assertIn("afterany", submit)
+
+    def test_sherlock_autoresearch_schedule_contract(self) -> None:
+        example = (ROOT / "workflow_slurm" / "autoresearch.scrontab.example").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("#SCRON -p service", example)
+        self.assertIn("#SCRON --dependency=singleton", example)
+        self.assertIn("*/5 * * * *", example)
+        for name in ("start_autoresearch.sh", "stop_autoresearch.sh", "status_autoresearch.sh"):
+            self.assertTrue((ROOT / "workflow_slurm" / name).is_file())
+
+        with tempfile.TemporaryDirectory() as temporary:
+            temp = Path(temporary)
+            current = temp / "current"
+            filtered = temp / "filtered"
+            current.write_text(
+                "0 1 * * * /other/job\n"
+                "# BEGIN SALUKI_AUTORESEARCH\n"
+                "*/5 * * * * bash /repo/supervisor.sh\n"
+                "# END SALUKI_AUTORESEARCH\n"
+                "0 2 * * * /another/job\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                [
+                    "bash",
+                    "-c",
+                    'source "$1"; remove_autoresearch_block "$2" "$3"',
+                    "bash",
+                    str(ROOT / "workflow_slurm" / "autoresearch_scrontab_common.sh"),
+                    str(current),
+                    str(filtered),
+                ],
+                check=True,
+            )
+            self.assertEqual(
+                filtered.read_text(encoding="utf-8"),
+                "0 1 * * * /other/job\n0 2 * * * /another/job\n",
+            )
 
     def test_data_is_external_and_ignored(self) -> None:
         common = (ROOT / "workflow" / "common.sh").read_text(encoding="utf-8")

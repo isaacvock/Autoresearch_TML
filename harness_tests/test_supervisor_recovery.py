@@ -72,6 +72,23 @@ class SupervisorRecoveryTest(unittest.TestCase):
         self.assertEqual(reconciled["status"], "submission_uncertain")
         self.assertEqual(reconciled["active_experiment"], "uncertain-test")
 
+    def test_stop_requested_during_agent_turn_prevents_submission(self) -> None:
+        def finish_agent_after_stop(_root: Path) -> subprocess.CompletedProcess[str]:
+            runtime = self.root / "runtime"
+            runtime.mkdir(parents=True, exist_ok=True)
+            (runtime / "STOP").touch()
+            return subprocess.CompletedProcess(["codex"], returncode=0, stdout="", stderr="")
+
+        with (
+            patch("autoresearch_harness.supervisor._invoke_codex", side_effect=finish_agent_after_stop),
+            patch(
+                "autoresearch_harness.supervisor._launch_proposal",
+                side_effect=AssertionError("a stopped campaign must not submit a proposal"),
+            ),
+        ):
+            state = run_once(self.root)
+        self.assertEqual(state["status"], "stopped")
+
 
 if __name__ == "__main__":
     unittest.main()

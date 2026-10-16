@@ -117,8 +117,33 @@ module supplied the configured `codex` command. A direct experiment does not
 invoke or load Codex; a supervisor tick invokes it only when no experiment
 needs reconciliation or monitoring.
 
-Schedule the appropriate command every five minutes with cron or Windows Task
-Scheduler. For cron, use absolute paths, for example:
+For unattended Sherlock operation, install the included Slurm schedule once:
+
+```bash
+bash workflow_slurm/start_autoresearch.sh
+```
+
+This validates the configured TranscriptML and Codex environments, removes a
+previous `runtime/STOP` marker, and adds a marked entry to Sherlock's
+`scrontab`. It preserves unrelated scheduled jobs. Sherlock then runs one
+supervisor tick every five minutes in the lightweight `service` partition;
+`--dependency=singleton` prevents overlapping copies. The rendered schedule is
+equivalent to `workflow_slurm/autoresearch.scrontab.example`.
+
+Inspect or stop it with:
+
+```bash
+bash workflow_slurm/status_autoresearch.sh
+bash workflow_slurm/stop_autoresearch.sh
+```
+
+Stopping removes only this repository's scheduled block and creates
+`runtime/STOP`. It deliberately does not cancel training jobs that are already
+running. The supervisor checks the stop marker again after a Codex turn, so a
+stop requested during that turn prevents submission of its proposal.
+
+For unattended WSL operation, schedule the local command every five minutes
+with cron or Windows Task Scheduler. For cron, use an absolute path:
 
 ```cron
 */5 * * * * /absolute/path/Autoresearch/workflow/supervisor_once_wsl.sh >>/absolute/path/supervisor.log 2>&1
@@ -179,6 +204,10 @@ Autoresearch/
 │   └── supervisor_once_wsl.sh        one local supervisor tick
 ├── workflow_slurm/
 │   ├── sherlock_config.sh            Sherlock environment activation
+│   ├── autoresearch.scrontab.example recurring supervisor example
+│   ├── start_autoresearch.sh          enable recurring Sherlock supervisor
+│   ├── stop_autoresearch.sh           stop new autonomous work safely
+│   ├── status_autoresearch.sh         show schedule, state, and related jobs
 │   ├── submit_train_eval_cv.sh       array and aggregation submission
 │   ├── train_eval_cv_fold.sh         Slurm wrapper around run_fold.sh
 │   ├── aggregate_experiment.sh       validation, scoring, and ledger update
