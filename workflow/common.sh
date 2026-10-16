@@ -11,7 +11,8 @@ source "${WORKFLOW_DIR}/campaign.env"
 : "${DATASET_DIR:?Launch through a WSL or Sherlock wrapper so config.sh is loaded}"
 BASE_TRAIN_CONFIG="${BASE_TRAIN_CONFIG:-${AUTORESEARCH_ROOT}/example_train_config.json}"
 : "${RUNS_ROOT:?Launch through a WSL or Sherlock wrapper so config.sh is loaded}"
-MOTIF_SPECS_FILE="${MOTIF_SPECS_FILE:-${WORKFLOW_DIR}/motifs.tsv}"
+CONFIGURED_MOTIF_SPECS_FILE="${AUTORESEARCH_ROOT}/runtime/configured_motifs.tsv"
+MOTIF_SPECS_FILE="${MOTIF_SPECS_FILE:-${CONFIGURED_MOTIF_SPECS_FILE}}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 TRANSCRIPTML_BIN="${TRANSCRIPTML_BIN:-transcriptml}"
 
@@ -23,6 +24,46 @@ require_experiment_id() {
     echo "experiment id must match [A-Za-z0-9][A-Za-z0-9._-]*" >&2
     return 2
   fi
+}
+
+materialize_configured_motifs() {
+  [[ "${MOTIF_SPECS_FILE}" == "${CONFIGURED_MOTIF_SPECS_FILE}" ]] || return 0
+  if ! declare -p MOTIFS_TO_ABLATE >/dev/null 2>&1; then
+    echo "MOTIFS_TO_ABLATE is missing from config.sh" >&2
+    return 2
+  fi
+  if (( ${#MOTIFS_TO_ABLATE[@]} == 0 )); then
+    echo "MOTIFS_TO_ABLATE must contain at least one LABEL=MOTIF entry" >&2
+    return 2
+  fi
+
+  mkdir -p "${AUTORESEARCH_ROOT}/runtime"
+  local temporary="${CONFIGURED_MOTIF_SPECS_FILE}.tmp.$$"
+  printf '# label\tmotif\n' > "${temporary}"
+  local specification label motif
+  for specification in "${MOTIFS_TO_ABLATE[@]}"; do
+    if [[ "${specification}" != *=* ]]; then
+      echo "Invalid motif specification '${specification}'; expected LABEL=MOTIF" >&2
+      rm -f "${temporary}"
+      return 2
+    fi
+    label="${specification%%=*}"
+    motif="${specification#*=}"
+    if [[ -z "${label}" || -z "${motif}" || ! "${label}" =~ ^[A-Za-z0-9._-]+$ ]]; then
+      echo "Invalid motif specification '${specification}'" >&2
+      rm -f "${temporary}"
+      return 2
+    fi
+    printf '%s\t%s\n' "${label}" "${motif}" >> "${temporary}"
+  done
+  if ! "${PYTHON_BIN}" -c \
+      'from autoresearch_harness.folds import read_motifs; import sys; read_motifs(sys.argv[1])' \
+      "${temporary}"; then
+    rm -f "${temporary}"
+    return 2
+  fi
+  mv -f "${temporary}" "${CONFIGURED_MOTIF_SPECS_FILE}"
+  export MOTIF_SPECS_FILE
 }
 
 validate_campaign() {
@@ -47,6 +88,7 @@ validate_campaign() {
     return 2
   }
   [[ -f "${BASE_TRAIN_CONFIG}" ]] || { echo "Base train config not found: ${BASE_TRAIN_CONFIG}" >&2; return 2; }
+  materialize_configured_motifs
   [[ -f "${MOTIF_SPECS_FILE}" ]] || { echo "Motif specification not found: ${MOTIF_SPECS_FILE}" >&2; return 2; }
   [[ "${EVAL_SPLIT}" == "test" ]] || { echo "EVAL_SPLIT is immutable and must be test" >&2; return 2; }
   command -v "${TRANSCRIPTML_BIN}" >/dev/null 2>&1 || {

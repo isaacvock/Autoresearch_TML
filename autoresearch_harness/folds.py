@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import importlib.metadata
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -38,6 +39,8 @@ def read_motifs(path: str | Path) -> list[tuple[str, str]]:
             if len(fields) != 2 or not all(fields):
                 raise ValueError(f"{path}:{line_number}: expected LABEL<TAB>MOTIF")
             label, motif = fields
+            if re.fullmatch(r"[A-Za-z0-9._-]+", label) is None:
+                raise ValueError(f"invalid motif label (use letters, digits, '.', '_', or '-'): {label}")
             if label in labels:
                 raise ValueError(f"duplicate motif label: {label}")
             if motif in sequences:
@@ -47,10 +50,6 @@ def read_motifs(path: str | Path) -> list[tuple[str, str]]:
             motifs.append((label, motif))
     if not motifs:
         raise ValueError(f"no motifs found in {path}")
-    if tuple(motifs) != EXPECTED_MOTIFS:
-        raise ValueError(
-            "motif specification differs from the immutable nine-motif campaign definition"
-        )
     return motifs
 
 
@@ -98,6 +97,7 @@ def prepare_experiment(
     base_config: str | Path,
     runs_root: str | Path | None = None,
     dataset_dir: str | Path | None = None,
+    motifs_file: str | Path | None = None,
 ) -> Path:
     root_path = Path(root).resolve()
     experiment_id = validate_experiment_id(experiment_id)
@@ -111,6 +111,13 @@ def prepare_experiment(
     runs_path = Path(runs_root).resolve() if runs_root is not None else root_path / "runs"
     experiment = runs_path / experiment_id
     snapshot = experiment / "config" / "train_config.json"
+    motif_source = (
+        Path(motifs_file).resolve()
+        if motifs_file is not None
+        else root_path / "workflow" / "motifs.tsv"
+    )
+    read_motifs(motif_source)
+    motif_snapshot = experiment / "config" / "motifs.tsv"
     experiment.mkdir(parents=True, exist_ok=True)
     payload = source.read_bytes()
     if snapshot.exists():
@@ -121,13 +128,21 @@ def prepare_experiment(
         temporary = snapshot.with_name(f".{snapshot.name}.tmp")
         temporary.write_bytes(payload)
         temporary.replace(snapshot)
+    motif_payload = motif_source.read_bytes()
+    if motif_snapshot.exists():
+        if motif_snapshot.read_bytes() != motif_payload:
+            raise ValueError(f"experiment {experiment_id} already has different motif definitions")
+    else:
+        temporary = motif_snapshot.with_name(f".{motif_snapshot.name}.tmp")
+        temporary.write_bytes(motif_payload)
+        temporary.replace(motif_snapshot)
     metadata_path = experiment / "experiment.json"
     if not metadata_path.exists():
         try:
             transcriptml_version = importlib.metadata.version("transcriptml")
         except importlib.metadata.PackageNotFoundError:
             transcriptml_version = "unknown"
-        motifs_path = root_path / "workflow" / "motifs.tsv"
+        motifs = read_motifs(motif_snapshot)
         atomic_write_json(
             metadata_path,
             {
@@ -145,7 +160,8 @@ def prepare_experiment(
                     "training_by_fold": [42 + fold for fold in range(5)],
                     "motif_ablation": 42,
                 },
-                "motifs_sha256": sha256_file(motifs_path) if motifs_path.is_file() else None,
+                "motifs_sha256": sha256_file(motif_snapshot),
+                "motifs": [{"label": label, "motif": motif} for label, motif in motifs],
                 "transcriptml": {
                     "version": transcriptml_version,
                     "executable": shutil.which("transcriptml"),
@@ -154,10 +170,14 @@ def prepare_experiment(
                 "dataset": _dataset_manifest(dataset_dir) if dataset_dir is not None else None,
             },
         )
-    elif dataset_dir is not None:
-        existing_dataset = read_json(metadata_path).get("dataset")
-        if existing_dataset and Path(existing_dataset["path"]).resolve() != Path(dataset_dir).resolve():
-            raise ValueError(f"experiment {experiment_id} was prepared with a different dataset")
+    else:
+        metadata = read_json(metadata_path)
+        if metadata.get("motifs_sha256") != sha256_file(motif_snapshot):
+            raise ValueError(f"experiment {experiment_id} was prepared with different motifs")
+        if dataset_dir is not None:
+            existing_dataset = metadata.get("dataset")
+            if existing_dataset and Path(existing_dataset["path"]).resolve() != Path(dataset_dir).resolve():
+                raise ValueError(f"experiment {experiment_id} was prepared with a different dataset")
     return experiment
 
 
@@ -294,18 +314,22 @@ def complete_fold(
 
 def validate_fold(experiment_dir: str | Path, fold: int, motifs_file: str | Path) -> dict[str, Any]:
     experiment = Path(experiment_dir).resolve()
+    motifs = read_motifs(motifs_file)
     manifest_path = experiment / "folds" / f"fold{fold}.json"
     if not manifest_path.is_file():
         raise FileNotFoundError(manifest_path)
     manifest = read_json(manifest_path)
     if manifest.get("status") != "complete" or int(manifest.get("fold", -1)) != int(fold):
         raise ValueError(f"invalid fold manifest: {manifest_path}")
+    expected_labels = [label for label, _ in motifs]
+    if manifest.get("motif_labels") != expected_labels:
+        raise ValueError(f"fold manifest motif set differs from experiment: {manifest_path}")
     attempt = (experiment / manifest["attempt_dir"]).resolve()
     try:
         attempt.relative_to(experiment)
     except ValueError as exc:
         raise ValueError(f"fold manifest escapes experiment directory: {manifest_path}") from exc
-    paths = validate_attempt(attempt, fold, read_motifs(motifs_file), manifest.get("eval_split", "test"))
+    paths = validate_attempt(attempt, fold, motifs, manifest.get("eval_split", "test"))
     _validate_fold_config(experiment, paths, fold)
     return {"manifest": manifest, "manifest_path": manifest_path, "attempt_dir": attempt, "paths": paths}
 

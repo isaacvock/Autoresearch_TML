@@ -23,8 +23,8 @@ Project layout:
   configuration fields, values/ranges, and cross-field constraints. It is
   maintained by the user, not by autonomous research turns.
 - `example_train_config.json`: the agent-editable candidate configuration.
-- `workflow/`: shared five-fold runner, immutable campaign settings, motif set,
-  and local execution wrappers.
+- `workflow/`: shared five-fold runner, immutable campaign settings, reference
+  motif catalogue, and local execution wrappers.
 - `workflow_slurm/`: Sherlock activation and Slurm wrappers around the shared
   runner.
 - `autoresearch_harness/`: validation, scoring, ledger, Pareto, and supervisor
@@ -45,17 +45,17 @@ The following are immutable within a campaign:
 - candidate training base seed `42`, with TranscriptML deterministically using
   `42 + fold` for folds `0` through `4`, and motif-ablation seed `42`;
 - the external dataset and its prepared contents;
+- one or more motif definitions selected by the user in the fixed
+  `MOTIFS_TO_ABLATE` list in `config.sh`;
 - effect definition `A - R` over the complete dataset for every fold model;
 - Pearson tolerance `1e-4` and motif-effect tolerance `1e-6`;
-- available compute/resource budget; and
-- exactly these nine motifs from `workflow/motifs.tsv`: `PRE`, `ARE_heptamer`,
-  `let7_7mer_m8`, `miR16_7mer_m8`, `GRE`, `mir19_7mer_m8`,
-  `mir17_7mer_m8`, `mir29_7mer_m8`, and `mir130_7mer_m8`.
+- available compute/resource budget.
 
 Prediction is pooled out-of-fold Pearson across all five fixed test folds and
 is maximized. Motif recovery is the median `A - R` for each motif after pooling
 all instances across all five models; `worst_motif_median` is the maximum of
-those nine medians and is minimized. A candidate belongs on the Pareto frontier
+the configured motif medians and is minimized. With one configured motif, it is
+simply that motif's median. A candidate belongs on the Pareto frontier
 unless another candidate is non-worse in both objectives and better beyond at
 least one tolerance.
 

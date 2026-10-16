@@ -7,6 +7,9 @@ AUTORESEARCH_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # shellcheck source=wsl_config.sh
 source "${SCRIPT_DIR}/wsl_config.sh"
 setup_wsl_transcriptml_env
+# shellcheck source=common.sh
+source "${SCRIPT_DIR}/common.sh"
+validate_campaign
 
 export AUTORESEARCH_EXECUTION_MODE=local
 export PYTHONPATH="${AUTORESEARCH_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"

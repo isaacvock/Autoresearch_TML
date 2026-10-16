@@ -18,3 +18,10 @@ SHERLOCK_RUNS_ROOT="/scratch/users/${USER}/saluki-autoresearch-runs"
 SHERLOCK_CODEX_BIN="codex"
 SHERLOCK_CONDA_ROOT="${GROUP_HOME:-${HOME}}/miniconda"
 SHERLOCK_CONDA_ENV="transcript-ml"
+
+# Motif-ablation objective, shared by WSL and Sherlock.
+# Each entry is "LABEL=MOTIF". Use one entry for a single-motif objective or
+# multiple entries to minimize the maximum of their pooled median A - R effects.
+MOTIFS_TO_ABLATE=(
+  "let7_7mer_m8=CUACCUC"
+)

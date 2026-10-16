@@ -25,6 +25,14 @@ class WorkflowContractTest(unittest.TestCase):
         self.assertEqual(len(EXPECTED_MOTIFS), 9)
         self.assertEqual(len({sequence for _, sequence in EXPECTED_MOTIFS}), 9)
 
+        with tempfile.TemporaryDirectory() as temporary:
+            selected = Path(temporary) / "motifs.tsv"
+            selected.write_text(
+                "".join(f"{label}\t{motif}\n" for label, motif in EXPECTED_MOTIFS[:2]),
+                encoding="utf-8",
+            )
+            self.assertEqual(tuple(read_motifs(selected)), EXPECTED_MOTIFS[:2])
+
     def test_local_and_slurm_share_the_fold_runner(self) -> None:
         local = (ROOT / "workflow" / "run_experiment.sh").read_text(encoding="utf-8")
         slurm = (ROOT / "workflow_slurm" / "train_eval_cv_fold.sh").read_text(encoding="utf-8")
@@ -107,7 +115,8 @@ class WorkflowContractTest(unittest.TestCase):
                 f'SHERLOCK_RUNS_ROOT="{temp / "runs"}"\n'
                 'SHERLOCK_CODEX_BIN="codex"\n'
                 f'SHERLOCK_CONDA_ROOT="{Path(conda_prefix).parents[1]}"\n'
-                f'SHERLOCK_CONDA_ENV="{Path(conda_prefix).name}"\n',
+                f'SHERLOCK_CONDA_ENV="{Path(conda_prefix).name}"\n'
+                'MOTIFS_TO_ABLATE=("PRE=UGUA[A|U|C]AUA" "ARE_heptamer=UAUUUAU")\n',
                 encoding="utf-8",
             )
             env = os.environ.copy()
@@ -132,6 +141,13 @@ class WorkflowContractTest(unittest.TestCase):
             self.assertIn("--array=0-4", calls[0])
             self.assertIn("--parsable", calls[0])
             self.assertIn("--dependency=afterany:8100", calls[1])
+            selected_motifs = (temp / "runs" / "stub-submit" / "config" / "motifs.tsv").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn("PRE\tUGUA[A|U|C]AUA", selected_motifs)
+            self.assertIn("ARE_heptamer\tUAUUUAU", selected_motifs)
+            self.assertNotIn("let7_7mer_m8", selected_motifs)
+            self.assertIn("MOTIF_SPECS_FILE=", calls[0])
             receipt = json.loads(
                 (temp / "runs" / "stub-submit" / "submission.json").read_text(encoding="utf-8")
             )

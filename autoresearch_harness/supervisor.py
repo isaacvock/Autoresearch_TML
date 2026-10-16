@@ -136,7 +136,7 @@ def reconcile(root: Path, runs_root: Path, state: dict[str, Any]) -> bool:
     if _all_fold_manifests(runs_root, experiment_id):
         state["status"] = "aggregating"
         save_state(root, state)
-        score_experiment(experiment, root / "workflow" / "motifs.tsv")
+        score_experiment(experiment, experiment / "config" / "motifs.tsv")
         record_scored_experiment(root, experiment_id, runs_root)
         state.update(status="idle", active_experiment=None, jobs={}, last_error=None)
         save_state(root, state)
@@ -310,7 +310,12 @@ def _launch_proposal(root: Path, runs_root: Path, state: dict[str, Any]) -> bool
     dataset_dir = os.environ.get("DATASET_DIR")
     if not dataset_dir:
         raise RuntimeError("DATASET_DIR must point to the external campaign dataset")
-    experiment = prepare_experiment(root, experiment_id, base_config, runs_root, dataset_dir)
+    motifs_file = os.environ.get("MOTIF_SPECS_FILE")
+    if not motifs_file:
+        raise RuntimeError("MOTIF_SPECS_FILE was not loaded from config.sh")
+    experiment = prepare_experiment(
+        root, experiment_id, base_config, runs_root, dataset_dir, motifs_file
+    )
     atomic_write_json(experiment / "proposal.json", proposal)
     proposal_path.unlink()
     mode = state.get("execution_mode", "local")

@@ -28,7 +28,10 @@ EXPERIMENT_DIR="${RUNS_ROOT}/${EXPERIMENT_ID}"
   --experiment-id "${EXPERIMENT_ID}" \
   --base-config "${BASE_TRAIN_CONFIG}" \
   --runs-root "${RUNS_ROOT}" \
-  --dataset "${DATASET_DIR}"
+  --dataset "${DATASET_DIR}" \
+  --motifs "${MOTIF_SPECS_FILE}"
+
+MOTIF_SPECS_FILE="${EXPERIMENT_DIR}/config/motifs.tsv"
 
 if "${PYTHON_BIN}" -m autoresearch_harness validate-fold \
     --experiment-dir "${EXPERIMENT_DIR}" \

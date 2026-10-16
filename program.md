@@ -31,9 +31,9 @@ report the integrity failure and exit without a proposal.
 ## 2. Learn from completed experiments
 
 Use only validated records. Compare pooled out-of-fold Pearson (maximize) and
-`worst_motif_median` (minimize). Inspect all nine motif medians and fold-level
-statistics, not just the two headline values. Treat changes within `1e-4`
-Pearson or `1e-6` motif effect as ties.
+`worst_motif_median` (minimize). Inspect every configured motif median and
+fold-level statistic, not just the two headline values. Treat changes within
+`1e-4` Pearson or `1e-6` motif effect as ties.
 
 The first campaign experiment must be the unchanged five-fold baseline, using
 the current committed config and commit for both parent and candidate. After

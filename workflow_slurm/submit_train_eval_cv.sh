@@ -23,10 +23,12 @@ command -v sbatch >/dev/null 2>&1 || { echo "sbatch is not available" >&2; exit 
   --experiment-id "${EXPERIMENT_ID}" \
   --base-config "${BASE_TRAIN_CONFIG}" \
   --runs-root "${RUNS_ROOT}" \
-  --dataset "${DATASET_DIR}" >/dev/null
+  --dataset "${DATASET_DIR}" \
+  --motifs "${MOTIF_SPECS_FILE}" >/dev/null
 
 EXPERIMENT_DIR="${RUNS_ROOT}/${EXPERIMENT_ID}"
 BASE_TRAIN_CONFIG="${EXPERIMENT_DIR}/config/train_config.json"
+MOTIF_SPECS_FILE="${EXPERIMENT_DIR}/config/motifs.tsv"
 LOG_DIR="${EXPERIMENT_DIR}/slurm"
 mkdir -p "${LOG_DIR}"
 

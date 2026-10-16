@@ -17,6 +17,7 @@ for FOLD in $(seq 0 $((N_FOLDS - 1))); do
   bash "${SCRIPT_DIR}/run_fold.sh" --experiment-id "${EXPERIMENT_ID}" --fold "${FOLD}"
 done
 
+MOTIF_SPECS_FILE="${RUNS_ROOT}/${EXPERIMENT_ID}/config/motifs.tsv"
 "${PYTHON_BIN}" -m autoresearch_harness score \
   --experiment-dir "${RUNS_ROOT}/${EXPERIMENT_ID}" \
   --motifs "${MOTIF_SPECS_FILE}" \

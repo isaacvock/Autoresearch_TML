@@ -47,6 +47,8 @@ def score_experiment(
     experiment = Path(experiment_dir).resolve()
     motifs = read_motifs(motifs_file)
     metadata = read_json(experiment / "experiment.json")
+    if sha256_file(motifs_file) != metadata.get("motifs_sha256"):
+        raise ValueError("motif definitions differ from the immutable experiment snapshot")
     validate_dataset_manifest(metadata.get("dataset"))
     fold_pearsons: list[float] = []
     all_indices: list[np.ndarray] = []

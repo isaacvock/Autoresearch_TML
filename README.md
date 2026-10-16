@@ -26,6 +26,12 @@ SHERLOCK_RUNS_ROOT="/scratch/users/${USER}/saluki-autoresearch-runs"
 SHERLOCK_CODEX_BIN="codex"
 SHERLOCK_CONDA_ROOT="${GROUP_HOME:-${HOME}}/miniconda"
 SHERLOCK_CONDA_ENV="transcript-ml"
+
+# Shared motif objective (one or more LABEL=MOTIF entries)
+MOTIFS_TO_ABLATE=(
+  "let7_7mer_m8=CUACCUC"
+  "miR16_7mer_m8=UGCUGCU"
+)
 ```
 
 Use Linux paths in both sections: WSL paths for the local section and Sherlock
@@ -37,6 +43,14 @@ will be written. `WSL_CODEX_BIN` is the local Codex executable path.
 needed by the autonomous supervisor but not by a direct manually selected
 experiment. The repository root is detected automatically and should not be
 added to `config.sh`.
+
+`MOTIFS_TO_ABLATE` controls both which ablations run and the motif objective.
+Each entry uses `LABEL=MOTIF` syntax; labels must be filesystem-safe and unique,
+and motif definitions must also be unique. With one entry, its pooled median
+`A - R` effect is minimized. With multiple entries, every listed ablation runs
+and the objective minimized is the maximum of their pooled median effects.
+Choose this list before starting a campaign and do not change it while adding
+experiments to the same results directory.
 
 Commit `config.sh` after setting it so fresh agent turns and Sherlock clones use
 the same declared campaign configuration. Do not place tokens or passwords in
@@ -55,8 +69,8 @@ bash workflow/run_local_wsl.sh --experiment-id baseline-five-fold
 
 Each experiment gets an immutable subdirectory under the configured WSL runs
 path. The direct runner processes folds serially; each fold performs training,
-held-out evaluation, and all nine full-dataset motif ablations before validated
-aggregation.
+held-out evaluation, and all configured full-dataset motif ablations before
+validated aggregation.
 
 ## Direct Sherlock run
 
@@ -157,7 +171,7 @@ Autoresearch/
 ├── README.md
 ├── workflow/
 │   ├── campaign.env                  fixed folds, seeds, metric tolerances
-│   ├── motifs.tsv                    fixed nine-motif definition
+│   ├── motifs.tsv                    reference motif catalogue
 │   ├── common.sh                     shared paths and campaign validation
 │   ├── run_fold.sh                   common local/Slurm fold implementation
 │   ├── run_experiment.sh             serial five-fold local runner
@@ -198,24 +212,14 @@ the corresponding targets as one vector. The scorer requires every dataset
 index exactly once, rejects duplicates or missing indices, and verifies the CSV
 targets against the immutable `y.npy` values.
 
-The motif objective uses these nine motifs:
-
-- `PRE`
-- `ARE_heptamer`
-- `let7_7mer_m8`
-- `miR16_7mer_m8`
-- `GRE`
-- `mir19_7mer_m8`
-- `mir17_7mer_m8`
-- `mir29_7mer_m8`
-- `mir130_7mer_m8`
-
-Each of the five trained models performs every motif ablation over the complete
-dataset. Effects use TranscriptML's `A - R` definition. For each motif, effects
-from all instances and all five models are concatenated and their median is
-computed. `worst_motif_median` is the maximum of the nine motif medians and is
-minimized; pooled Pearson is maximized. Negative motif medians are desired, and
-the metrics include near-zero and nonnegative diagnostics.
+The motif objective uses the one or more definitions in `MOTIFS_TO_ABLATE` in
+`config.sh`. Each of the five trained models performs every configured motif
+ablation over the complete dataset. Effects use TranscriptML's `A - R`
+definition. For each motif, effects from all instances and all five models are
+concatenated and their median is computed. `worst_motif_median` is the maximum
+of the configured motif medians and is minimized; with one motif it equals that
+motif's median. Pooled Pearson is maximized. Negative motif medians are desired,
+and the metrics include near-zero and nonnegative diagnostics.
 
 The Pareto frontier uses tolerances of `1e-4` Pearson and `1e-6` motif effect.
 A candidate dominates another only when it is non-worse in both objectives
@@ -229,6 +233,7 @@ snapshot, validates the fixed training seed and model name, and records:
 
 - candidate config hash;
 - dataset path, sizes, and SHA-256 hashes;
+- an immutable snapshot and hash of the configured motif definitions;
 - fixed folds and seeds;
 - TranscriptML package version and executable path; and
 - the optimization-CV performance label.
@@ -241,6 +246,7 @@ RUNS_ROOT/<experiment-id>/
 ├── experiment.json
 ├── proposal.json                    autonomous runs only
 ├── config/train_config.json         immutable candidate snapshot
+├── config/motifs.tsv                immutable selected-motif snapshot
 ├── attempts/
 │   ├── fold0/<attempt-id>/
 │   │   ├── cv/fold0/                dataset links, config, model, predictions
@@ -270,7 +276,7 @@ when there is nothing recoverable does it create a new attempt and perform:
 1. TranscriptML fold preparation using the immutable config snapshot.
 2. Model training.
 3. Evaluation on the fold's held-out test split.
-4. All nine full-dataset motif ablations.
+4. All configured full-dataset motif ablations.
 5. Artifact validation and atomic promotion to `folds/foldN.json`.
 
 Promotion requires a nonempty checkpoint, prediction CSV, split definition,
@@ -297,7 +303,7 @@ and motif populations. It then atomically writes `metrics.json` containing:
 - pooled out-of-fold Pearson;
 - Pearson and example count for each fold;
 - mean and standard deviation of fold Pearson values;
-- all nine pooled motif medians;
+- all configured pooled motif medians;
 - `worst_motif` and `worst_motif_median`;
 - near-zero, nonnegative, and all-negative motif diagnostics;
 - motif instance counts; and

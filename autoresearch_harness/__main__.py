@@ -35,6 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     prepare.add_argument("--base-config", required=True)
     prepare.add_argument("--runs-root")
     prepare.add_argument("--dataset")
+    prepare.add_argument("--motifs")
 
     validate = commands.add_parser("validate-fold", help="validate a completed fold manifest and artifacts")
     validate.add_argument("--experiment-dir", required=True)
@@ -95,6 +96,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.base_config,
                 args.runs_root,
                 args.dataset,
+                args.motifs,
             )
         )
     elif args.command == "validate-fold":

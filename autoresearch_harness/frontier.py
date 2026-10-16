@@ -133,6 +133,8 @@ def _record_scored_experiment(
         "parent_commit": proposal.get("parent_commit"),
         "hypothesis": proposal.get("hypothesis"),
         "config_sha256": metadata.get("config_sha256"),
+        "motifs_sha256": metadata.get("motifs_sha256"),
+        "motifs": metadata.get("motifs"),
         "seeds": metadata.get("seeds"),
         "transcriptml": metadata.get("transcriptml"),
         "job_ids": {
